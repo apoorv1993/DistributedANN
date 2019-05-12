@@ -5,7 +5,11 @@
 #include "load_data.h"
 #include "neuron.h"
 #include "network.h"
+#include "CycleTimer.h"
 
+#define INPUT_LAYER_SIZE 196
+#define HIDDEN_LAYER_SIZE 49
+#define OUTPUT_LAYER_SIZE 10
 using namespace std;
 
 vector<char> images;
@@ -52,6 +56,7 @@ void loadData(char *trainingFile, char *labelFile) {
     //int te_pos = 0;
 
   for (int i = 0; i < 10000; i++) {
+//    for (int i = 0; i < 500; i++) {
     Card c;
     if (i % 5 != 0) {
       //training_set[tr_pos] = c;
@@ -97,26 +102,36 @@ int main(int argc, char **argv) {
     if (inputFile == NULL || labelFile == NULL) {
       std::cout<<"Incorrect arguments"<<std::endl;
     }
+    double loadStartTime = currentSeconds();
 
-    loadData(inputFile, labelFile);
     setupSigmoid();
-    Network *neuralnet = new Network(196, 49, 10);
+    loadData(inputFile, labelFile);
+    Network *neuralnet = new Network(INPUT_LAYER_SIZE, HIDDEN_LAYER_SIZE, OUTPUT_LAYER_SIZE);
 
 
+    double traingStartTime = currentSeconds();
     // Training with all training data
     for (int i = 0; i < training_set.size(); i++) {
+//    for (int i = 0; i < 10; i++) {
       neuralnet->respond(training_set[i]);
       neuralnet->train(training_set[i].outputs);
     }
+    double traingEndTime = currentSeconds();
 
     int totalRight = 0;
     // Testing
     for (int i = 0; i < testing_set.size(); i++) {
+//    for (int i = 0; i < 10; i++) {
       neuralnet->respond(testing_set[i]);
-      if(neuralnet->bestIndex == testing_set[i].output) totalRight ++;
+      int out = neuralnet->getOutput();
+      if(out == testing_set[i].output) totalRight ++;
       std::cout<<"TestCard  "<<i<<"::"<<"Got ::"<<neuralnet->bestIndex<<", Expected::"<<testing_set[i].output<<std::endl;
     }
+    double testEndTime = currentSeconds();
 
     std::cout<<"Accuracy is "<<(float)(totalRight)/(testing_set.size())<<std::endl;
+    std::cout<<"Load time is "<<traingStartTime-loadStartTime<<std::endl;
+    std::cout<<"Training time is "<<traingEndTime-traingStartTime<<std::endl;
+    std::cout<<"Test time is "<<testEndTime-traingEndTime<<std::endl;
     return 0;
 }

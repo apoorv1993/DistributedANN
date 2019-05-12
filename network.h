@@ -7,7 +7,7 @@ class Network {
     vector<Neuron> output_layer;
 
  public:
-  int bestIndex = 0;
+  int bestIndex = -1;
   Network(int inputs, int hidden, int outputs) {
 
         for (int i = 0; i < inputs; i++) {
@@ -50,9 +50,11 @@ class Network {
             output_layer[k].setError(outputs[k]);
             output_layer[k].train();
         }
-        float best = -1.0;
+        float best = -1.0f;
         for (int i = 0; i < output_layer.size(); i++) {
-            if (output_layer[i].output > best) bestIndex = i;
+            if (output_layer[i].output > best) {
+              bestIndex = i;
+            }
         }
         // propagate back to the hidden layer
         for (int j = 0; j < hidden_layer.size(); j++) {
@@ -60,5 +62,16 @@ class Network {
         }
 
     // The input layer doesn't learn: it is the input and only that
+    }
+
+    int getOutput() {
+      float best = -1.0f;
+      for (int i = 0; i < output_layer.size(); i++) {
+        if (output_layer[i].output > best) {
+          best = output_layer[i].output;
+          bestIndex = i;
+        }
+      }
+      return bestIndex;
     }
 };

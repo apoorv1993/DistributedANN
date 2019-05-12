@@ -10,4 +10,4 @@ add_executable(FastCodeAnn
         load_data.h
         network.h
         neuron.h
-        sigmoid.h)
+        sigmoid.h CycleTimer.cpp CycleTimer.h)

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <stdlib.h>
+#include <cstdlib>
 #include "sigmoid.h"
 using namespace std;
 
@@ -22,11 +22,10 @@ public:
 
         error = 0.0;
         inputs = p_inputs;
-
         for (int i = 0; i < p_inputs->size(); i++) {
             // Note:
             // Need to change to rand() between -1.0 and 1.0
-            weights.push_back(((float) rand()) / (float) RAND_MAX);
+            weights.push_back(RandomFloat(-1.0f, 1.0f));
         }
     }
 
@@ -47,11 +46,18 @@ public:
 
     void train() {
         // Back propagation
-        float delta = (1.0 - output) * (1.0 + output) * error * LEARNING_RATE;
+        float delta = (1.0f - output) * (1.0f + output) * error * LEARNING_RATE;
         for (int i = 0; i < inputs->size(); i++) {
             (*inputs)[i].error += weights[i] * error;
             weights[i] += (*inputs)[i].output * delta;
         }
+    }
+
+    float RandomFloat(float a, float b) {
+      float random = ((float) rand()) / (float) RAND_MAX;
+      float diff = b - a;
+      float r = random * diff;
+      return a + r;
     }
 
 };
