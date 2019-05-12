@@ -16,12 +16,12 @@ class Network {
         }
 
         for (int j = 0; j < hidden; j++) {
-            Neuron neuron (input_layer);
+            Neuron neuron (&input_layer);
             hidden_layer.push_back(neuron);
         }
 
         for (int k = 0; k < outputs; k++) {
-            Neuron neuron (hidden_layer);
+            Neuron neuron (&hidden_layer);
             output_layer.push_back(neuron);
         }
 
