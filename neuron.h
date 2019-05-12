@@ -46,7 +46,7 @@ public:
     }
 
     void train() {
-
+        // Back propagation
         float delta = (1.0 - output) * (1.0 + output) * error * LEARNING_RATE;
         for (int i = 0; i < inputs.size(); i++) {
             inputs[i].error += weights[i] * error;

@@ -5,9 +5,10 @@ class Network {
     vector<Neuron> input_layer;
     vector<Neuron> hidden_layer;
     vector<Neuron> output_layer;
-    int bestIndex = 0;
 
-    Network(int inputs, int hidden, int outputs) {
+ public:
+  int bestIndex = 0;
+  Network(int inputs, int hidden, int outputs) {
 
         for (int i = 0; i < inputs; i++) {
             Neuron neuron;
@@ -43,7 +44,7 @@ class Network {
     }
 
 
-    void train(vector<float> outputs) {
+    void train(float* outputs) {
         // adjust the output layer
         for (int k = 0; k < output_layer.size(); k++) {
             output_layer[k].setError(outputs[k]);

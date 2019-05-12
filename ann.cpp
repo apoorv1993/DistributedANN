@@ -53,7 +53,6 @@ void loadData(char *trainingFile, char *labelFile) {
 
   for (int i = 0; i < 10000; i++) {
     Card c;
-    cout << i << endl;
     if (i % 5 != 0) {
       //training_set[tr_pos] = c;
       //training_set[tr_pos].imageLoad(images, 16 + i * 196); // There is an offset of 16 bytes
@@ -100,4 +99,24 @@ int main(int argc, char **argv) {
     }
 
     loadData(inputFile, labelFile);
+    setupSigmoid();
+    Network *neuralnet = new Network(196, 49, 10);
+
+
+    // Training with all training data
+    for (int i = 0; i < training_set.size(); i++) {
+      neuralnet->respond(training_set[i]);
+      neuralnet->train(training_set[i].outputs);
+    }
+
+    int totalRight = 0;
+    // Testing
+    for (int i = 0; i < testing_set.size(); i++) {
+      neuralnet->respond(testing_set[i]);
+      if(neuralnet->bestIndex == testing_set[i].output) totalRight ++;
+      std::cout<<"TestCard  "<<i<<"::"<<"Got ::"<<neuralnet->bestIndex<<", Expected::"<<testing_set[i].output<<std::endl;
+    }
+
+    std::cout<<"Accuracy is "<<(float)(totalRight)/(testing_set.size())<<std::endl;
+    return 0;
 }
