@@ -15,9 +15,7 @@ public:
 
     void imageLoad(vector<char> images, int offset) {
         for (int i = 0; i < 196; i++) {
-            inputs[i] = ((unsigned char)images[i+offset])/128.0 - 1.0; 
-            //cout << (int)((unsigned char)images[i+offset]) << endl;
-            //cout << inputs[i] << endl; 
+            inputs[i] = ((unsigned char)images[i+offset])/128.0f - 1.0f;
         }
     }
 
@@ -28,7 +26,7 @@ public:
                 outputs[i] = 1.0;
             }
             else {
-                outputs[i] = -1.0;
+                outputs[i] = -1.0f;
             }
         }
     }

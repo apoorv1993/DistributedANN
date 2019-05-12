@@ -1,0 +1,8 @@
+./a.out -d data/t10k-images-14x14.idx-ubyte -l data/t10k-labels.i
+
+
+
+./a.out -d data/train-images-idx3-ubyte -l data/train-labels-idx1-ubyte -t data/t10k-images-14x14.idx-ubyte -o data/t10k-labels.idx1-ubyte -m 60000 -n 10000
+
+
+./a.out -d data/train-images-idx3-ubyte -l data/train-labels-idx1-ubyte -t data/t10k-images-14x14.idx-ubyte -o data/t10k-labels.idx1-ubyte -m 10000 -n 1000 -e 100

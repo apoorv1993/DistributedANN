@@ -44,11 +44,11 @@ class Network {
     }
 
 
-    void train(float* outputs) {
+    void train(float learning_rate, float* outputs) {
         // adjust the output layer
         for (int k = 0; k < output_layer.size(); k++) {
             output_layer[k].setError(outputs[k]);
-            output_layer[k].train();
+            output_layer[k].train(learning_rate);
         }
         float best = -1.0f;
         for (int i = 0; i < output_layer.size(); i++) {
@@ -58,7 +58,7 @@ class Network {
         }
         // propagate back to the hidden layer
         for (int j = 0; j < hidden_layer.size(); j++) {
-          hidden_layer[j].train();
+          hidden_layer[j].train(learning_rate);
         }
 
     // The input layer doesn't learn: it is the input and only that

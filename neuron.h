@@ -5,7 +5,7 @@
 #include "sigmoid.h"
 using namespace std;
 
-float LEARNING_RATE = 0.01;
+float LEARNING_RATE = 0.10;
 
 class Neuron {
 public:
@@ -44,9 +44,9 @@ public:
         error = desired - output;
     }
 
-    void train() {
+    void train(float learning_rate) {
         // Back propagation
-        float delta = (1.0f - output) * (1.0f + output) * error * LEARNING_RATE;
+        float delta = (1.0f - output) * (1.0f + output) * error * learning_rate;
         for (int i = 0; i < inputs->size(); i++) {
             (*inputs)[i].error += weights[i] * error;
             weights[i] += (*inputs)[i].output * delta;
