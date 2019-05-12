@@ -24,7 +24,6 @@ class Network {
             Neuron neuron (&hidden_layer);
             output_layer.push_back(neuron);
         }
-
     }
 
     void respond(Card card) {

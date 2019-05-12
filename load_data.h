@@ -6,20 +6,23 @@ public:
     float* inputs;
     float* outputs;
 
+    unsigned long size;
+
     int output;
-    Card() {
-        inputs = new float [196];
+    Card(unsigned long size) {
+        this->size = size;
+        inputs = new float [size];
         outputs = new float [10];
     }
 
 
-    void imageLoad(vector<char> images, int offset) {
-        for (int i = 0; i < 196; i++) {
+    void imageLoad(vector<char> images, unsigned long offset) {
+        for (int i = 0; i < size; i++) {
             inputs[i] = ((unsigned char)images[i+offset])/128.0f - 1.0f;
         }
     }
 
-    void labelLoad(vector<char> labels, int offset) {
+    void labelLoad(vector<char> labels, unsigned long offset) {
         output = (int)((unsigned char)labels[offset]);
         for (int i = 0 ; i < 10; i++) {
             if (output == i) {
