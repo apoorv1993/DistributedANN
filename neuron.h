@@ -8,6 +8,7 @@ using namespace std;
 float LEARNING_RATE = 0.01;
 
 class Neuron {
+public:
     vector<Neuron> inputs; 
     vector<float> weights;
     float output;

@@ -2,11 +2,10 @@
 using namespace std;
 
 class Card {
-private:
+public:
     float* inputs;
     float* outputs;
 
-public:
     int output;
     Card() {
         inputs = new float [196];

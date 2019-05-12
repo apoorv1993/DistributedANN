@@ -11,17 +11,17 @@ class Network {
 
         for (int i = 0; i < inputs; i++) {
             Neuron neuron;
-            input_layer.push_end(neuron);
+            input_layer.push_back(neuron);
         }
 
         for (int j = 0; j < hidden; j++) {
             Neuron neuron (input_layer);
-            hidden_layer.push_end(neuron);
+            hidden_layer.push_back(neuron);
         }
 
         for (int k = 0; k < outputs; k++) {
             Neuron neuron (hidden_layer);
-            output_layer.push_end(neuron);
+            output_layer.push_back(neuron);
         }
 
     }
@@ -43,7 +43,7 @@ class Network {
     }
 
 
-    void train(float [] outputs) {
+    void train(vector<float> outputs) {
         // adjust the output layer
         for (int k = 0; k < output_layer.size(); k++) {
             output_layer[k].setError(outputs[k]);
@@ -60,4 +60,4 @@ class Network {
 
     // The input layer doesn't learn: it is the input and only that
     }
-}
+};

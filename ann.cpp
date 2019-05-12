@@ -3,6 +3,7 @@
 #include <vector>
 #include "load_data.h"
 #include "neuron.h"
+#include "network.h"
 
 using namespace std;
 
@@ -68,6 +69,9 @@ void loadData() {
 
   //cout << testing_set[1088].output << endl;
 
+}
+
+void trainData() {
 }
 
 int main() {
