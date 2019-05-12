@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <getopt.h>
 #include "load_data.h"
 #include "neuron.h"
 #include "network.h"
@@ -15,8 +16,13 @@ vector<Card> training_set;
 
 
 void loadTrainingData(const char* filename) {
+    std::cout<<"Filename is "<<filename<<std::endl;
     ifstream ifs(filename, ios::binary|ios::ate);
+    if (!ifs.is_open()) {
+      std::cout<<"File is not opened"<<std::endl;
+    }
     ifstream::pos_type pos = ifs.tellg();
+    std::cout<<"Position is "<<pos<<std::endl;
 
     images.resize(pos);
 
@@ -35,10 +41,10 @@ void loadTrainingLabel(const char* filename) {
 }
 
 
-void loadData() {
+void loadData(char *trainingFile, char *labelFile) {
 
-    loadTrainingData("data/t10k-images-14x14.idx3-ubyte");
-    loadTrainingLabel("data/t10k-labels.idx1-ubyte");
+    loadTrainingData(trainingFile);
+    loadTrainingLabel(labelFile);
 
     //training_set.resize(8000);
     //int tr_pos = 0;
@@ -74,6 +80,24 @@ void loadData() {
 void trainData() {
 }
 
-int main() {
-    loadData();
+int main(int argc, char **argv) {
+    int     opt;
+    char *inputFile = NULL;
+    char *labelFile = NULL;
+
+    while ((opt = getopt(argc, argv, "l:i:")) != EOF) {
+      switch (opt) {
+        case 'i': inputFile = optarg;
+          break;
+        case 'l': labelFile = optarg;
+          break;
+        default: std::cout<<"Incorrect arguments"<<std::endl;
+          break;
+      }
+    }
+    if (inputFile == NULL || labelFile == NULL) {
+      std::cout<<"Incorrect arguments"<<std::endl;
+    }
+
+    loadData(inputFile, labelFile);
 }
