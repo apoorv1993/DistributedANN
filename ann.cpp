@@ -2,6 +2,7 @@
 #include <fstream>
 #include <vector>
 #include "load_data.h"
+#include "neuron.h"
 
 using namespace std;
 
@@ -21,6 +22,7 @@ void loadTrainingData(const char* filename) {
     ifs.seekg(0, ios::beg);
     ifs.read(&images[0], pos);
 }
+
 void loadTrainingLabel(const char* filename) {
     ifstream ifs(filename, ios::binary|ios::ate);
     ifstream::pos_type pos = ifs.tellg();
@@ -31,7 +33,8 @@ void loadTrainingLabel(const char* filename) {
     ifs.read(&labels[0], pos);
 }
 
-int main() {
+
+void loadData() {
 
     loadTrainingData("data/t10k-images-14x14.idx3-ubyte");
     loadTrainingLabel("data/t10k-labels.idx1-ubyte");
@@ -63,6 +66,10 @@ int main() {
     }
   }
 
-  cout << testing_set[1088].output << endl;
+  //cout << testing_set[1088].output << endl;
 
+}
+
+int main() {
+    loadData();
 }
