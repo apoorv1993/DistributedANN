@@ -16,13 +16,13 @@ public:
     }
 
 
-    void imageLoad(vector<char> images, unsigned long offset) {
+    void imageLoad(char* images, unsigned long offset) {
         for (int i = 0; i < size; i++) {
             inputs[i] = ((unsigned char)images[i+offset])/128.0f - 1.0f;
         }
     }
 
-    void labelLoad(vector<char> labels, unsigned long offset) {
+    void labelLoad(char* labels, unsigned long offset) {
         output = (int)((unsigned char)labels[offset]);
         for (int i = 0 ; i < 10; i++) {
             if (output == i) {

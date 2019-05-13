@@ -7,26 +7,37 @@ class Network {
     vector<Neuron> output_layer;
 
  public:
-  int bestIndex = -1;
-  Network(int inputs, int hidden, int outputs) {
+    int bestIndex;
+    Network(int inputs, int hidden, int outputs) {
 
-        for (int i = 0; i < inputs; i++) {
-            Neuron neuron;
-            input_layer.push_back(neuron);
-        }
+          for (int i = 0; i < inputs; i++) {
+              Neuron neuron;
+              input_layer.push_back(neuron);
+          }
 
-        for (int j = 0; j < hidden; j++) {
-            Neuron neuron (&input_layer);
-            hidden_layer.push_back(neuron);
-        }
+          for (int j = 0; j < hidden; j++) {
+              Neuron neuron (&input_layer);
+              hidden_layer.push_back(neuron);
+          }
 
-        for (int k = 0; k < outputs; k++) {
-            Neuron neuron (&hidden_layer);
-            output_layer.push_back(neuron);
-        }
+          for (int k = 0; k < outputs; k++) {
+              Neuron neuron (&hidden_layer);
+              output_layer.push_back(neuron);
+          }
     }
 
-    void respond(Card card) {
+    void copyTo(Network *otherNetwork) {
+      // Copy weights for hidden layer
+      for (int j = 0; j < hidden_layer.size(); j++) {
+        otherNetwork->hidden_layer[j].setWeights(hidden_layer[j].getWeights());
+      }
+      // Copy weights for output layer
+      for (int k = 0; k < output_layer.size(); k++) {
+        otherNetwork->output_layer[k].setWeights(output_layer[k].getWeights());
+      }
+    }
+
+  void respond(Card card) {
 
         for (int i = 0; i < input_layer.size(); i++) {
             input_layer[i].output = card.inputs[i];

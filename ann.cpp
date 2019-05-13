@@ -17,20 +17,18 @@
 
 #define CROSS_VALIDATION (5)
 #define LEARNING_RATE (0.01)
-#define RMSE_THRESHOLD (0.10)
+#define ACCURACY_THRESHOLD (0.10)
 
 using namespace std;
 
-vector<char> images;
-vector<char> labels;
+char* images = NULL;
+char* labels = NULL;
 
 vector<Card> testing_set;
 vector<Card> training_set;
 
 
 void loadInputData(const char* filename, unsigned long max_size) {
-    images.clear();
-
     std::cout<<"Filename is "<<filename<<", max_size is "<<max_size<<std::endl;
     ifstream ifs(filename, ios::binary|ios::ate);
     if (!ifs.is_open()) {
@@ -43,14 +41,13 @@ void loadInputData(const char* filename, unsigned long max_size) {
       exit(1);
     }
 
-    images.resize(max_size);
+    images = new char[max_size];
 
     ifs.seekg(0, ios::beg);
     ifs.read(&images[0], max_size);
 }
 
 void loadLabelData(const char* filename, unsigned long max_size) {
-    labels.clear();
 
     std::cout<<"Filename is "<<filename<<", max_size is "<<max_size<<std::endl;
     ifstream ifs(filename, ios::binary|ios::ate);
@@ -61,7 +58,7 @@ void loadLabelData(const char* filename, unsigned long max_size) {
       exit(1);
     }
 
-    labels.resize(max_size);
+    labels = new char[max_size];
 
     ifs.seekg(0, ios::beg);
     ifs.read(&labels[0], max_size);
@@ -84,6 +81,9 @@ void loadData(vector<Card> &data_set, int data_size, char *dataFile, char *label
       c.labelLoad(labels, 8 + i);  // There is an offset of 8 bytes
       data_set.push_back(c);
     }
+
+    delete images;
+    delete labels;
 }
 
 void trainData() {
@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
     int training_size = 0;
     int test_size = 0;
 
-    int epoch = 0;
+    int maxEpoch = 0;
 
     while ((opt = getopt(argc, argv, "d:l:t:o:m:n:e:")) != EOF) {
       switch (opt) {
@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
           break;
         case 'n': test_size = atoi(optarg);
           break;
-        case 'e': epoch = atoi(optarg);
+        case 'e': maxEpoch = atoi(optarg);
           break;
         default: std::cout<<"Incorrect arguments"<<std::endl;
           break;
@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
       std::cout<<"Incorrect arguments"<<std::endl;
     }
 
-    if (training_size == 0 || test_size == 0 || epoch == 0) {
+    if (training_size == 0 || test_size == 0 || maxEpoch == 0) {
       std::cout<<"Incorrect arguments (Size)"<<std::endl;
     }
     double loadStartTime = currentSeconds();
@@ -139,19 +139,24 @@ int main(int argc, char **argv) {
     // Load test Data
     loadData(testing_set, test_size, testInputFile, testLabelFile);
     std::cout<<"Completed loading of test data"<<std::endl;
-
-    Network *neuralnet = new Network(INPUT_LAYER_SIZE, HIDDEN_LAYER_SIZE, OUTPUT_LAYER_SIZE);
     double loadEndTime = currentSeconds();
+    std::cout << "Load time is " << loadEndTime - loadStartTime << std::endl;
+
+
+    Network *neuralNetwork = new Network(INPUT_LAYER_SIZE, HIDDEN_LAYER_SIZE, OUTPUT_LAYER_SIZE);
+    Network *bestNeuralNetwork = new Network(INPUT_LAYER_SIZE, HIDDEN_LAYER_SIZE, OUTPUT_LAYER_SIZE);
+
     int crossFoldValidationTestSize = training_set.size()/CROSS_VALIDATION;
 
     for(int section = 0 ; section < CROSS_VALIDATION; section++) {
       int testStartIndex = crossFoldValidationTestSize * section;
 
-      double bestRate= 0.01;
-      double bestRight = 0;
-      double minRMSE = DBL_MAX;
+      double maxAccuracy = 0;
 
-      for (int e = 1; e < epoch; e++) {
+      // Start with the best network from previous phase
+      bestNeuralNetwork->copyTo(neuralNetwork);
+
+      for (int epoch = 1; epoch <= maxEpoch; epoch++) {
         double trainingStartTime = currentSeconds();
         // Training with all training data
         for (int i = 0; i < training_set.size(); i++) {
@@ -160,56 +165,49 @@ int main(int argc, char **argv) {
             i += crossFoldValidationTestSize - 1;
             continue;
           }
-          neuralnet->respond(training_set[i]);
-          neuralnet->train(LEARNING_RATE, training_set[i].outputs);
+          neuralNetwork->respond(training_set[i]);
+          neuralNetwork->train(LEARNING_RATE, training_set[i].outputs);
         }
         double trainingEndTime = currentSeconds();
 
         int totalRight = 0;
-        double totalDiff = 0;
-
-        // Testing for RMSE
-        for (int i = testStartIndex; i < testStartIndex+crossFoldValidationTestSize; i++) {
-          neuralnet->respond(training_set[i]);
-          int out = neuralnet->getOutput();
+        // Testing for Accuracy
+        for (int i = testStartIndex; i < testStartIndex + crossFoldValidationTestSize; i++) {
+          neuralNetwork->respond(training_set[i]);
+          int out = neuralNetwork->getOutput();
           if (out == training_set[i].output) {
             totalRight++;
-          } else {
-            totalDiff += pow(out - training_set[i].output, 2);
           }
         }
-
-        double rmse = sqrt(totalDiff / crossFoldValidationTestSize);
-        if (rmse < minRMSE) {
-          minRMSE = rmse;
-        }
-
         double testEndTime = currentSeconds();
-        std::cout<<"Cross::"<<section<<",EPOCH:" << e << ", Accuracy is " << (float) (totalRight) / crossFoldValidationTestSize<< ", RMSE::"<< rmse << std::endl;
 
-        if (rmse > (1 + RMSE_THRESHOLD) * minRMSE) {
-          std::cout << "Breaking because of threshold:MinRMSE=" << minRMSE << ", RMSE=" << rmse << std::endl;
+        double accuracy = (double) (totalRight) / crossFoldValidationTestSize;
+        if (accuracy > maxAccuracy) {
+          maxAccuracy = accuracy;
+          neuralNetwork->copyTo(bestNeuralNetwork);
+        }
+        if (accuracy < (1 - ACCURACY_THRESHOLD) * maxAccuracy) {
+          std::cout << "Breaking because of threshold:maxAccuracy=" << maxAccuracy << ",accuracy=" << accuracy << std::endl;
           break;
         }
 
+        std::cout<<"Cross::"<<section<<",EPOCH:" << epoch << ", Accuracy is " << accuracy<< std::endl;
         std::cout << "Training time is " << trainingEndTime - trainingStartTime << std::endl;
         std::cout << "Test time is " << testEndTime - trainingEndTime << std::endl;
       }
-      std::cout << "Best Learning Rate:"<<bestRate<<", Accuracy " << (float) (bestRight)/crossFoldValidationTestSize<<std::endl;
+      std::cout<<"Cross::"<<section<<",Best Accuracy is " <<maxAccuracy<< std::endl;
     }
 
-  int correctPrediction = 0;
-
-  // Testing for RMSE
-  for (int i = 0; i < testing_set.size(); i++) {
-    neuralnet->respond(testing_set[i]);
-    int out = neuralnet->getOutput();
-    if (out == testing_set[i].output) {
-      correctPrediction++;
+    int correctPrediction = 0;
+    // Testing for Accuracy on test data
+    for (int i = 0; i < testing_set.size(); i++) {
+      bestNeuralNetwork->respond(testing_set[i]);
+      int out = bestNeuralNetwork->getOutput();
+      if (out == testing_set[i].output) {
+        correctPrediction++;
+      }
     }
-  }
 
-  std::cout << "Load time is " << loadEndTime - loadStartTime << std::endl;
-  std::cout << "Accuracy " << (float) (correctPrediction)/(testing_set.size())<<std::endl;
-  return 0;
+    std::cout << "Accuracy::"<< (float) (correctPrediction)/(testing_set.size())<<std::endl;
+    return 0;
 }
