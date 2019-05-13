@@ -19,7 +19,7 @@
 #define CROSS_VALIDATION (5)
 #define LEARNING_RATE (0.01)
 #define ACCURACY_THRESHOLD (0.10)
-#define MINI_BATCH_SIZE (32)
+#define DEFAULT_MINI_BATCH_SIZE (32)
 
 using namespace std;
 
@@ -112,10 +112,12 @@ int main(int argc, char **argv) {
 
   int training_size = 0;
   int test_size = 0;
+  int updateFrequency = 1;
+  int updateInterval = updateFrequency * DEFAULT_MINI_BATCH_SIZE;
 
   int maxEpoch = 0;
 
-  while ((opt = getopt(argc, argv, "d:l:t:o:m:n:e:")) != EOF) {
+  while ((opt = getopt(argc, argv, "d:l:t:o:m:n:e:f:")) != EOF) {
     switch (opt) {
       case 'd': trainingInputFile = optarg;
         break;
@@ -131,16 +133,23 @@ int main(int argc, char **argv) {
         break;
       case 'e': maxEpoch = atoi(optarg);
         break;
+      case 'f': updateFrequency = atoi(optarg);
+        updateInterval = updateFrequency * DEFAULT_MINI_BATCH_SIZE;
+        break;
       default: std::cout << "Incorrect arguments" << std::endl;
         break;
     }
   }
   if (trainingInputFile == NULL || trainingLabelFile == NULL || testInputFile == NULL || testLabelFile == NULL) {
     std::cout << "Incorrect arguments" << std::endl;
+    MPI_Finalize();
+    exit(1);
   }
 
   if (training_size == 0 || test_size == 0 || maxEpoch == 0) {
     std::cout << "Incorrect arguments (Size)" << std::endl;
+    MPI_Finalize();
+    exit(1);
   }
 
   // Setup the sigmoid function
@@ -187,7 +196,9 @@ int main(int argc, char **argv) {
         }
         neuralNetwork->respond(training_set[i]);
         neuralNetwork->train(LEARNING_RATE, training_set[i].outputs);
-        if (batchIndex % MINI_BATCH_SIZE == 0) {
+
+        // Average parameters after every mini batch
+        if (batchIndex % updateInterval == 0) {
           neuralNetwork->AverageParameters(rank, clusterSize);
           batchIndex = 0;
         } else {
@@ -217,8 +228,6 @@ int main(int argc, char **argv) {
       int nodeData[2] = {totalRight, crossFoldValidationTestSize};
       int clusterData[2];
       MPI_Allreduce(nodeData, clusterData, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-      std::cout<<"["<<rank<<"] Node Correct::" << totalRight << ",Size::" << crossFoldValidationTestSize<<std::endl;
-      std::cout<<"["<<rank<<"] Cluster Correct::" << clusterData[0] << ", Cluster Size::" << clusterData[1]<<std::endl;
 
       double accuracy = (double) (clusterData[0]) / clusterData[1];
       if (accuracy > maxAccuracy) {
@@ -232,11 +241,14 @@ int main(int argc, char **argv) {
 //        break;
 //      }
 
-      std::cout<<"["<<rank<<"] Cross::" << section << ",EPOCH:" << epoch << ", Accuracy is " << accuracy << std::endl;
-      std::cout<<"["<<rank<<"] Training time is " << trainingEndTime - trainingStartTime << std::endl;
-      std::cout<<"["<<rank<<"] Test time is " << testEndTime - trainingEndTime << std::endl;
+      if (rank == 0) {
+        std::cout << "[" << rank << "] Cross::" << section << ",EPOCH:" << epoch << ", Accuracy is " << accuracy<< std::endl;
+        std::cout << "[" << rank << "] Training time is " << trainingEndTime - trainingStartTime << std::endl;
+      }
     }
-    std::cout<<"["<<rank<<"] Cross::" << section << ",Best Accuracy is " << maxAccuracy << std::endl;
+    if (rank == 0) {
+      std::cout << "[" << rank << "] Cross::" << section << ",Best Accuracy is " << maxAccuracy << std::endl;
+    }
   }
 
   // Master node runs the test
@@ -254,14 +266,20 @@ int main(int argc, char **argv) {
         correctPrediction++;
       }
     }
-    std::cout << "Final Accuracy::"<< (float) (correctPrediction)/(testing_set.size())<<std::endl;
+    double end = currentSeconds();
+
+    // Used for PROFILING
+    std::cout<<"ANN:: Final Accuracy:: "<< (float) (correctPrediction)/(testing_set.size())<<std::endl;
+    std::cout<<"ANN:: Total time:: "<<end-start<<" seconds"<<std::endl;
+    std::cout<<"ANN:: Update Interval:: "<<updateInterval<<std::endl;
+    std::cout<<"ANN:: Cluster Size:: "<<clusterSize<<std::endl;
+    std::cout<<"ANN:: Max EPOCH:: "<<maxEpoch<<std::endl;
+    std::cout<<"ANN:: Training Size:: "<<training_size<<std::endl;
+    std::cout<<"ANN:: Communication Time:: "<<bestNeuralNetwork->communicationTime + neuralNetwork->communicationTime<<std::endl;
   }
-  double end = currentSeconds();
-  std::cout<<"["<<rank<<"] Total time is "<<end-start<<" seconds"<<std::endl;
 
   delete bestNeuralNetwork;
   delete neuralNetwork;
-
   MPI_Finalize();
   return 0;
 }

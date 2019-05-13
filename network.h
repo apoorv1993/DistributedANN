@@ -4,6 +4,7 @@
 #include <vector>
 #include "neuron.h"
 #include "mpi.h"
+#include "CycleTimer.h"
 
 class Network {
 
@@ -18,6 +19,7 @@ class Network {
 
  public:
     int bestIndex;
+    double communicationTime;
     Network(int inputs, int hidden, int outputs, int rank) {
           for (int i = 0; i < inputs; i++) {
               Neuron *neuron = new Neuron();
@@ -37,6 +39,7 @@ class Network {
           bufferSize = hidden * inputs + outputs * hidden;
           weightSendBuffer = new float[bufferSize];
           weightReceiveBuffer = new float[bufferSize];
+          communicationTime = 0;
     }
 
     ~Network() {
@@ -155,6 +158,7 @@ class Network {
     }
 
     void BroadcastParameters(int rank, int clusterSize) {
+      double start = currentSeconds();
       if (rank == 0) {
         GetParameters(weightSendBuffer);
       }
@@ -162,12 +166,15 @@ class Network {
       if (rank != 0) {
         UpdateParameters(weightSendBuffer, clusterSize, false);
       }
+      communicationTime += (currentSeconds() - start);
     }
 
     void AverageParameters(int rank, int clusterSize) {
+      double start = currentSeconds();
       GetParameters(weightSendBuffer);
       MPI_Allreduce(weightSendBuffer, weightReceiveBuffer, bufferSize, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
       UpdateParameters(weightReceiveBuffer, clusterSize, true);
+      communicationTime += (currentSeconds() - start);
     }
 };
 
