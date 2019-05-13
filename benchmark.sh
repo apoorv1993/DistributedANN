@@ -29,7 +29,6 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # Include MPI runtime and compile time
-source ~/.bashrc
 mpic++ ann.cpp CycleTimer.cpp -o ann
 
 processorCount=(16 4 1)

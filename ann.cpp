@@ -16,7 +16,7 @@
 #define HIDDEN_LAYER_SIZE (300)
 #define OUTPUT_LAYER_SIZE (10)
 
-#define CROSS_VALIDATION (5)
+#define CROSS_VALIDATION (0.2)
 #define LEARNING_RATE (0.01)
 #define ACCURACY_THRESHOLD (0.10)
 #define DEFAULT_MINI_BATCH_SIZE (32)
@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
   double loadStartTime = currentSeconds();
   // Load training Data
   loadData(training_set, offset, size, trainingInputFile, trainingLabelFile);
-  std::cout<<"["<<rank<<"] Completed loading of training data" << std::endl;
+  std::cout<<"["<<rank<<"] Completed loading of training data, Size::" << training_set.size()<<std::endl;
 
   double loadEndTime = currentSeconds();
   std::cout<<"["<<rank<<"] Load time is " << loadEndTime - loadStartTime << std::endl;
@@ -170,7 +170,7 @@ int main(int argc, char **argv) {
   Network *neuralNetwork = new Network(INPUT_LAYER_SIZE, HIDDEN_LAYER_SIZE, OUTPUT_LAYER_SIZE, rank);
   Network *bestNeuralNetwork = new Network(INPUT_LAYER_SIZE, HIDDEN_LAYER_SIZE, OUTPUT_LAYER_SIZE, rank);
 
-  int crossFoldValidationTestSize = training_set.size() / CROSS_VALIDATION;
+  int crossFoldValidationTestSize = floor(training_set.size() * CROSS_VALIDATION);
 
   double start = currentSeconds();
 
@@ -198,15 +198,14 @@ int main(int argc, char **argv) {
         neuralNetwork->train(LEARNING_RATE, training_set[i].outputs);
 
         // Average parameters after every mini batch
+        batchIndex++;
         if (batchIndex % updateInterval == 0) {
           neuralNetwork->AverageParameters(rank, clusterSize);
           batchIndex = 0;
-        } else {
-          batchIndex ++;
         }
       }
       /**
-       * Update and averate the weight paramters on all nodes
+       * Update and average the weight paramters on all nodes
        * The weights will be same on all ndoes after this
        */
       neuralNetwork->AverageParameters(rank, clusterSize);
@@ -251,8 +250,10 @@ int main(int argc, char **argv) {
     }
   }
 
+  double end = currentSeconds();
   // Master node runs the test
   if (rank == 0) {
+
     // Load test Data
     loadData(testing_set, 0, test_size, testInputFile, testLabelFile);
     std::cout << "Completed loading of test data" << std::endl;
@@ -266,8 +267,6 @@ int main(int argc, char **argv) {
         correctPrediction++;
       }
     }
-    double end = currentSeconds();
-
     // Used for PROFILING
     std::cout<<"ANN:: Final Accuracy:: "<< (float) (correctPrediction)/(testing_set.size())<<std::endl;
     std::cout<<"ANN:: Total time:: "<<end-start<<" seconds"<<std::endl;
