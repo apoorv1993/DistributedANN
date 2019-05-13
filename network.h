@@ -1,4 +1,9 @@
+#ifndef _NETWORK_H
+#define _NETWORK_H
+
 #include <vector>
+#include "neuron.h"
+#include "mpi.h"
 
 class Network {
 
@@ -6,24 +11,32 @@ class Network {
     vector<Neuron*> hidden_layer;
     vector<Neuron*> output_layer;
 
+    float *weightSendBuffer;
+    float *weightReceiveBuffer;
+
+    size_t bufferSize;
+
  public:
     int bestIndex;
-    Network(int inputs, int hidden, int outputs) {
-
+    Network(int inputs, int hidden, int outputs, int rank) {
           for (int i = 0; i < inputs; i++) {
               Neuron *neuron = new Neuron();
               input_layer.push_back(neuron);
           }
 
           for (int j = 0; j < hidden; j++) {
-              Neuron *neuron = new Neuron(&input_layer);
+              Neuron *neuron = new Neuron(&input_layer, rank == 0);
               hidden_layer.push_back(neuron);
           }
 
           for (int k = 0; k < outputs; k++) {
-              Neuron *neuron = new Neuron(&hidden_layer);
+              Neuron *neuron = new Neuron(&hidden_layer, rank == 0);
               output_layer.push_back(neuron);
           }
+
+          bufferSize = hidden * inputs + outputs * hidden;
+          weightSendBuffer = new float[bufferSize];
+          weightReceiveBuffer = new float[bufferSize];
     }
 
     ~Network() {
@@ -98,4 +111,64 @@ class Network {
       }
       return bestIndex;
     }
+
+    void GetParameters(float *buffer) {
+      int offset = 0;
+      // First the hidden layer
+      for (int j = 0; j < hidden_layer.size(); j++) {
+        memcpy(buffer + offset, hidden_layer[j]->getWeights(), sizeof(float) * input_layer.size());
+        offset += input_layer.size();
+      }
+
+      // Then the output layer
+      for (int i = 0; i < output_layer.size(); i++) {
+        memcpy(buffer+offset, output_layer[i]->getWeights(), sizeof(float) * hidden_layer.size());
+        offset += hidden_layer.size();
+      }
+    }
+
+    void UpdateParameters(float *buffer, int clusterSize, bool doAverage) {
+      int offset = 0;
+      // First the hidden layer
+      for (int j = 0; j < hidden_layer.size(); j++) {
+        float *updateWeights = buffer + offset;
+        if (doAverage) {
+          for (int k = 0; k < input_layer.size(); k++) {
+            *updateWeights /= clusterSize;
+          }
+        }
+        hidden_layer[j]->setWeights(updateWeights);
+        offset += input_layer.size();
+      }
+
+      // Then the output layer
+      for (int i = 0; i < output_layer.size(); i++) {
+        float *updateWeights = (float*)(buffer + offset);
+        if (doAverage) {
+          for (int k = 0; k < hidden_layer.size(); k++) {
+            *updateWeights /= clusterSize;
+          }
+        }
+        output_layer[i]->setWeights(updateWeights);
+        offset += hidden_layer.size();
+      }
+    }
+
+    void BroadcastParameters(int rank, int clusterSize) {
+      if (rank == 0) {
+        GetParameters(weightSendBuffer);
+      }
+      MPI_Bcast(weightSendBuffer, bufferSize, MPI_FLOAT, 0, MPI_COMM_WORLD);
+      if (rank != 0) {
+        UpdateParameters(weightSendBuffer, clusterSize, false);
+      }
+    }
+
+    void AverageParameters(int rank, int clusterSize) {
+      GetParameters(weightSendBuffer);
+      MPI_Allreduce(weightSendBuffer, weightReceiveBuffer, bufferSize, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+      UpdateParameters(weightReceiveBuffer, clusterSize, true);
+    }
 };
+
+#endif //_NETWORK_H

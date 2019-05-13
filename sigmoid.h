@@ -1,3 +1,7 @@
+
+#ifndef _SIGMOID_H
+#define _SIGMOID_H
+
 #include <vector>
 #include <cmath>
 vector<float> g_sigmoid;
@@ -21,3 +25,5 @@ float lookupSigmoid(float x) {
 
     return g_sigmoid[value];
 }
+
+#endif //_SIGMOID_H

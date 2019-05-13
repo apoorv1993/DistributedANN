@@ -1,3 +1,6 @@
+#ifndef _LOADDATA_H
+#define _LOADDATA_H
+
 #include <vector>
 using namespace std;
 
@@ -34,3 +37,5 @@ public:
         }
     }
 };
+
+#endif //_LOADDATA_H

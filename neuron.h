@@ -1,3 +1,6 @@
+#ifndef _NEURON_H
+#define _NEURON_H
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -20,13 +23,15 @@ public:
       error = 0.0;
     }
 
-    Neuron(vector<Neuron*> *p_inputs) {
+    Neuron(vector<Neuron*> *p_inputs, bool initializeWeight) {
         error = 0.0;
         inputs = p_inputs;
         inputSize = p_inputs->size();
         weights = new float[inputSize];
-        for (int i = 0; i < inputSize; i++) {
+        if (initializeWeight) {
+          for (int i = 0; i < inputSize; i++) {
             weights[i] = RandomFloat(-1.0f, 1.0f);
+          }
         }
     }
 
@@ -73,3 +78,5 @@ public:
     }
 
 };
+
+#endif //_NEURON_H
