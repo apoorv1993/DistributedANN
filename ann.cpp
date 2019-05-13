@@ -16,7 +16,7 @@
 #define HIDDEN_LAYER_SIZE (300)
 #define OUTPUT_LAYER_SIZE (10)
 
-#define CROSS_VALIDATION (0.2)
+#define CROSS_VALIDATION_FOLDS (5)
 #define LEARNING_RATE (0.01)
 #define ACCURACY_THRESHOLD (0.10)
 #define DEFAULT_MINI_BATCH_SIZE (32)
@@ -170,11 +170,10 @@ int main(int argc, char **argv) {
   Network *neuralNetwork = new Network(INPUT_LAYER_SIZE, HIDDEN_LAYER_SIZE, OUTPUT_LAYER_SIZE, rank);
   Network *bestNeuralNetwork = new Network(INPUT_LAYER_SIZE, HIDDEN_LAYER_SIZE, OUTPUT_LAYER_SIZE, rank);
 
-  int crossFoldValidationTestSize = floor(training_set.size() * CROSS_VALIDATION);
+  int crossFoldValidationTestSize = floor(training_set.size() * (1.0/CROSS_VALIDATION_FOLDS));
 
   double start = currentSeconds();
-
-  for (int section = 0; section < CROSS_VALIDATION; section++) {
+  for (int section = 0; section < CROSS_VALIDATION_FOLDS; section++) {
     int testStartIndex = crossFoldValidationTestSize * section;
 
     double maxAccuracy = 0;
