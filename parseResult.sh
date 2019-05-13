@@ -13,26 +13,19 @@ echo ${columns} > ${outputfile}
 for file in ${filename};do
     echo $file
     #whatever you need with "$file"
-    output=$(cat $file| grep "DOMP")
-    # Only for master
-    masterLibTime=$(echo "${output}" | grep 'DOMP Master Library time' | awk '{print $6}')
-    masterTotalTime=$(echo "${output}" | grep 'DOMP Master Total time' | awk '{print $6}')
-    masterComputationTime=$(echo "scale=3; ${masterTotalTime} - ${masterLibTime}" | bc)
+    output=$(cat $file| grep "ANN")
+    # Time computation
+    totalTime=$(echo "${output}" | grep 'Total time' | awk '{print $3}')
+    communicationTime=$(echo "${output}" | grep 'Communication Time' | awk '{print $3}')
+    computationTime=$(echo "scale=3; ${totalTime} - ${communicationTime}" | bc)
 
-    # Only Slave average
-    slaveLibTime=$(echo "${output}" | grep 'DOMP Slave Library time' | awk '{print $6}')
-    slaveTotalTime=$(echo "${output}" | grep 'DOMP Slave Total time' | awk '{print $6}')
-    slaveComputationTime=$(echo "scale=3; ${slaveTotalTime} - ${slaveLibTime}" | bc)
+    clusterSize=$(echo "${output}" | grep 'Cluster Size' | awk '{print $3}')
+    trainingSize=$(echo "${output}" | grep 'Training Size' | awk '{print $3}')
+    accuracy=$(echo "${output}" | grep 'Final Accuracy' | awk '{print $3}')
+    updateInterval=$(echo "${output}" | grep 'Update Interval' | awk '{print $3}')
 
-    # Whole cluster average
-    clusterLibTime=$(echo "${output}" | grep 'DOMP Cluster Library time' | awk '{print $6}')
-    clusterTotalTime=$(echo "${output}" | grep 'DOMP Cluster Total time' | awk '{print $6}')
-    clusterComputationTime=$(echo "scale=3; ${clusterTotalTime} - ${clusterLibTime}" | bc)
-
-    clusterSize=$(echo "${output}" | grep 'DOMP Cluster Size' | awk '{print $5}')
-
-    testString=${clusterSize}','${masterLibTime}','${masterComputationTime}','${masterTotalTime}','${slaveLibTime}',
-    '${slaveComputationTime}','${slaveTotalTime}','${clusterLibTime}','${clusterComputationTime}','${clusterTotalTime}
+    testString=${clusterSize}','${trainingSize}','${accuracy}','${updateInterval}','${communicationTime}',
+    '${computationTime}','${totalTime}
     echo ${testString}
     echo ${testString} >> ${outputfile}
 done
