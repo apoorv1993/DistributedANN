@@ -209,5 +209,8 @@ int main(int argc, char **argv) {
     }
 
     std::cout << "Accuracy::"<< (float) (correctPrediction)/(testing_set.size())<<std::endl;
+
+    delete bestNeuralNetwork;
+    delete neuralNetwork;
     return 0;
 }
