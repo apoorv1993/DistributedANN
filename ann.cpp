@@ -13,62 +13,25 @@
 #define ROW_SIZE (28)
 #define COL_SIZE (28)
 #define INPUT_LAYER_SIZE (ROW_SIZE * COL_SIZE)
-#define HIDDEN_LAYER_SIZE 300
-#define OUTPUT_LAYER_SIZE 10
+#define HIDDEN_LAYER_SIZE (300)
+#define OUTPUT_LAYER_SIZE (10)
 
 #define CROSS_VALIDATION (5)
 #define LEARNING_RATE (0.01)
 #define ACCURACY_THRESHOLD (0.10)
+#define MINI_BATCH_SIZE (32)
 
 using namespace std;
 
 char* images = NULL;
 char* labels = NULL;
-
 vector<Card> testing_set;
 vector<Card> training_set;
-
-
-void loadInputData(const char* filename, unsigned long offset, unsigned long size) {
-    unsigned long max_size = offset + size;
-    std::cout<<"Filename is "<<filename<<", max_size is "<<max_size<<std::endl;
-    ifstream ifs(filename, ios::binary|ios::ate);
-    if (!ifs.is_open()) {
-      std::cout<<"File is not opened"<<std::endl;
-    }
-    ifstream::pos_type pos = ifs.tellg();
-
-    if (pos < max_size) {
-      std::cout<<"Incorrect size for input data. Pos is "<<pos<<std::endl;
-      exit(1);
-    }
-
-    images = new char[size];
-
-    ifs.seekg(offset, ios::beg);
-    ifs.read(&images[0], size);
-}
-
-void loadLabelData(const char* filename, char *destination, unsigned long offset, unsigned long size) {
-    unsigned long max_size = offset + size;
-    std::cout<<"Filename is "<<filename<<", max_size is "<<max_size<<std::endl;
-    ifstream ifs(filename, ios::binary|ios::ate);
-    ifstream::pos_type pos = ifs.tellg();
-
-    if (pos < max_size) {
-      std::cout<<"Incorrect size for input data. Pos is "<<pos<<std::endl;
-      exit(1);
-    }
-
-    labels = new char[size];
-
-    ifs.seekg(offset, ios::beg);
-    ifs.read(&labels[0], size);
-}
+int rank;
 
 void loadDataFromFile(const char* filename, char **destination, unsigned long offset, unsigned long size) {
   unsigned long max_size = offset + size;
-  std::cout<<"Filename is "<<filename<<", max_size is "<<max_size<<std::endl;
+  std::cout<<"["<<rank<<"] Filename is "<<filename<<", offset is "<<offset<<", size is "<<size<<std::endl;
   ifstream ifs(filename, ios::binary|ios::ate);
   ifstream::pos_type pos = ifs.tellg();
 
@@ -123,14 +86,18 @@ void Parallelize(int totalSize, int clusterSize, int rank, int *offset, int *siz
   }
   *offset = startOffset;
   *size = perNode;
+  std::cout<<"["<<rank<<"] offset="<<*offset<<", size="<<*size<<std::endl;
 }
 
 void trainData() {
 }
 
 int main(int argc, char **argv) {
+  // Seed to keep the results consistent everytime
+  srand (18645);
+
   int clusterSize = 1;
-  int rank = 0;
+  rank = 0;
   MPI_Init(&argc, &argv);
 
   MPI_Comm_size(MPI_COMM_WORLD, &clusterSize);
@@ -186,10 +153,10 @@ int main(int argc, char **argv) {
   double loadStartTime = currentSeconds();
   // Load training Data
   loadData(training_set, offset, size, trainingInputFile, trainingLabelFile);
-  std::cout << "Completed loading of training data" << std::endl;
+  std::cout<<"["<<rank<<"] Completed loading of training data" << std::endl;
 
   double loadEndTime = currentSeconds();
-  std::cout << "Load time is " << loadEndTime - loadStartTime << std::endl;
+  std::cout<<"["<<rank<<"] Load time is " << loadEndTime - loadStartTime << std::endl;
 
   Network *neuralNetwork = new Network(INPUT_LAYER_SIZE, HIDDEN_LAYER_SIZE, OUTPUT_LAYER_SIZE, rank);
   Network *bestNeuralNetwork = new Network(INPUT_LAYER_SIZE, HIDDEN_LAYER_SIZE, OUTPUT_LAYER_SIZE, rank);
@@ -210,6 +177,7 @@ int main(int argc, char **argv) {
 
     for (int epoch = 1; epoch <= maxEpoch; epoch++) {
       double trainingStartTime = currentSeconds();
+      int batchIndex = 0;
       // Training with all training data
       for (int i = 0; i < training_set.size(); i++) {
         // Skip the testing set for cross fold validation
@@ -219,6 +187,12 @@ int main(int argc, char **argv) {
         }
         neuralNetwork->respond(training_set[i]);
         neuralNetwork->train(LEARNING_RATE, training_set[i].outputs);
+        if (batchIndex % MINI_BATCH_SIZE == 0) {
+          neuralNetwork->AverageParameters(rank, clusterSize);
+          batchIndex = 0;
+        } else {
+          batchIndex ++;
+        }
       }
       /**
        * Update and averate the weight paramters on all nodes
@@ -243,23 +217,26 @@ int main(int argc, char **argv) {
       int nodeData[2] = {totalRight, crossFoldValidationTestSize};
       int clusterData[2];
       MPI_Allreduce(nodeData, clusterData, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      std::cout<<"["<<rank<<"] Node Correct::" << totalRight << ",Size::" << crossFoldValidationTestSize<<std::endl;
+      std::cout<<"["<<rank<<"] Cluster Correct::" << clusterData[0] << ", Cluster Size::" << clusterData[1]<<std::endl;
 
       double accuracy = (double) (clusterData[0]) / clusterData[1];
       if (accuracy > maxAccuracy) {
         maxAccuracy = accuracy;
         neuralNetwork->copyTo(bestNeuralNetwork);
       }
-      if (accuracy < (1 - ACCURACY_THRESHOLD) * maxAccuracy) {
-        std::cout << "Breaking because of threshold:maxAccuracy=" << maxAccuracy << ",accuracy=" << accuracy
-                  << std::endl;
-        break;
-      }
+      // Commenting this to keep the result comprable and consistent
+//      if (accuracy < (1 - ACCURACY_THRESHOLD) * maxAccuracy) {
+//        std::cout<<"["<<rank<<"] Breaking because of threshold:maxAccuracy=" << maxAccuracy << ",accuracy=" << accuracy
+//                  << std::endl;
+//        break;
+//      }
 
-      std::cout << "Cross::" << section << ",EPOCH:" << epoch << ", Accuracy is " << accuracy << std::endl;
-      std::cout << "Training time is " << trainingEndTime - trainingStartTime << std::endl;
-      std::cout << "Test time is " << testEndTime - trainingEndTime << std::endl;
+      std::cout<<"["<<rank<<"] Cross::" << section << ",EPOCH:" << epoch << ", Accuracy is " << accuracy << std::endl;
+      std::cout<<"["<<rank<<"] Training time is " << trainingEndTime - trainingStartTime << std::endl;
+      std::cout<<"["<<rank<<"] Test time is " << testEndTime - trainingEndTime << std::endl;
     }
-    std::cout << "Cross::" << section << ",Best Accuracy is " << maxAccuracy << std::endl;
+    std::cout<<"["<<rank<<"] Cross::" << section << ",Best Accuracy is " << maxAccuracy << std::endl;
   }
 
   // Master node runs the test
@@ -280,7 +257,7 @@ int main(int argc, char **argv) {
     std::cout << "Final Accuracy::"<< (float) (correctPrediction)/(testing_set.size())<<std::endl;
   }
   double end = currentSeconds();
-  std::cout <<" Total time is "<<end-start<<" seconds"<<std::endl;
+  std::cout<<"["<<rank<<"] Total time is "<<end-start<<" seconds"<<std::endl;
 
   delete bestNeuralNetwork;
   delete neuralNetwork;

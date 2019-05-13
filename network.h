@@ -98,7 +98,7 @@ class Network {
           hidden_layer[j]->train(learning_rate);
         }
 
-    // The input layer doesn't learn: it is the input and only that
+        // The input layer doesn't learn: it is the input and only that
     }
 
     int getOutput() {
@@ -122,7 +122,7 @@ class Network {
 
       // Then the output layer
       for (int i = 0; i < output_layer.size(); i++) {
-        memcpy(buffer+offset, output_layer[i]->getWeights(), sizeof(float) * hidden_layer.size());
+        memcpy(buffer + offset, output_layer[i]->getWeights(), sizeof(float) * hidden_layer.size());
         offset += hidden_layer.size();
       }
     }
@@ -134,7 +134,7 @@ class Network {
         float *updateWeights = buffer + offset;
         if (doAverage) {
           for (int k = 0; k < input_layer.size(); k++) {
-            *updateWeights /= clusterSize;
+            updateWeights[k] /= clusterSize;
           }
         }
         hidden_layer[j]->setWeights(updateWeights);
@@ -143,10 +143,10 @@ class Network {
 
       // Then the output layer
       for (int i = 0; i < output_layer.size(); i++) {
-        float *updateWeights = (float*)(buffer + offset);
+        float *updateWeights = buffer + offset;
         if (doAverage) {
           for (int k = 0; k < hidden_layer.size(); k++) {
-            *updateWeights /= clusterSize;
+            updateWeights[k] /= clusterSize;
           }
         }
         output_layer[i]->setWeights(updateWeights);
