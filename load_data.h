@@ -1,3 +1,6 @@
+#ifndef _LOADDATA_H
+#define _LOADDATA_H
+
 #include <vector>
 using namespace std;
 
@@ -6,30 +9,33 @@ public:
     float* inputs;
     float* outputs;
 
+    unsigned long size;
+
     int output;
-    Card() {
-        inputs = new float [196];
+    Card(unsigned long size) {
+        this->size = size;
+        inputs = new float [size];
         outputs = new float [10];
     }
 
 
-    void imageLoad(vector<char> images, int offset) {
-        for (int i = 0; i < 196; i++) {
-            inputs[i] = ((unsigned char)images[i+offset])/128.0 - 1.0; 
-            //cout << (int)((unsigned char)images[i+offset]) << endl;
-            //cout << inputs[i] << endl; 
+    void imageLoad(char* images, unsigned long offset) {
+        for (int i = 0; i < size; i++) {
+            inputs[i] = ((unsigned char)images[i+offset])/128.0f - 1.0f;
         }
     }
 
-    void labelLoad(vector<char> labels, int offset) {
+    void labelLoad(char* labels, unsigned long offset) {
         output = (int)((unsigned char)labels[offset]);
         for (int i = 0 ; i < 10; i++) {
             if (output == i) {
                 outputs[i] = 1.0;
             }
             else {
-                outputs[i] = -1.0;
+                outputs[i] = -1.0f;
             }
         }
     }
 };
+
+#endif //_LOADDATA_H
